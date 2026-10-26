@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スワップ複利シミュレーター</title>
+<meta name="theme-color" content="#101828">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root{
+    --bg: #0c1320;
+    --surface: #141d2e;
+    --surface-2: #1b2740;
+    --border: #2a3650;
+    --text-primary: #eef1f7;
+    --text-secondary: #93a0b8;
+    --text-muted: #5f6c85;
+    --blue: #3d8bf0;
+    --blue-dim: #1f3a5e;
+    --coral: #f4794a;
+    --green: #34c98f;
+    --red: #f0524f;
+    --amber: #f0b429;
+    --radius: 14px;
+  }
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html,body{
+    margin:0; padding:0; background: var(--bg); color: var(--text-primary);
+    font-family: -apple-system, "Hiragino Sans", "Noto Sans CJK JP", "Yu Gothic", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body{ padding-bottom: 3rem; }
+  header.app-header{
+    position: sticky; top:0; z-index: 10;
+    background: linear-gradient(180deg, var(--bg) 80%, transparent);
+    padding: 1.1rem 1.1rem 0.6rem;
+  }
+  header.app-header h1{
+    font-size: 17px; font-weight: 600; margin:0 0 2px;
+    letter-spacing: 0.01em;
+  }
+  header.app-header p{
+    font-size: 12.5px; color: var(--text-secondary); margin:0;
+  }
+  main{ padding: 0.4rem 1.1rem 1rem; max-width: 640px; margin: 0 auto; }
+
+  .card{
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.1rem; margin-bottom: 0.9rem;
+  }
+  .card h2{
+    font-size: 13px; font-weight: 600; color: var(--text-secondary);
+    text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 0.9rem;
+  }
+  .field{ margin-bottom: 0.85rem; }
+  .field:last-child{ margin-bottom: 0; }
+  .field label{
+    display:flex; justify-content: space-between; align-items: baseline;
+    font-size: 13.5px; color: var(--text-secondary); margin-bottom: 6px;
+  }
+  .field label .val{ color: var(--text-primary); font-weight: 600; font-size: 14px; }
+  input[type="number"]{
+    width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-primary); border-radius: 10px; padding: 10px 12px;
+    font-size: 16px; font-variant-numeric: tabular-nums;
+  }
+  input[type="number"]:focus{ outline: none; border-color: var(--blue); }
+  input[type="range"]{
+    width:100%; -webkit-appearance: none; appearance: none;
+    height: 4px; border-radius: 4px; background: var(--surface-2); margin: 6px 0 2px;
+  }
+  input[type="range"]::-webkit-slider-thumb{
+    -webkit-appearance: none; width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue); border: 3px solid var(--bg);
+  }
+  input[type="range"]::-moz-range-thumb{
+    width: 20px; height: 20px; border-radius: 50%;
+    background: var(--blue); border: 3px solid var(--bg);
+  }
+
+  .seg{
+    display:flex; gap:6px; background: var(--surface-2); padding: 4px;
+    border-radius: 10px; border: 1px solid var(--border);
+  }
+  .seg button{
+    flex:1; background: transparent; border: none; color: var(--text-secondary);
+    font-size: 13px; padding: 9px 4px; border-radius: 8px; font-weight: 500;
+    font-family: inherit;
+  }
+  .seg button.active{ background: var(--blue); color: white; }
+
+  .stats-grid{
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 0.9rem;
+  }
+  .stat{
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 0.85rem 0.9rem;
+  }
+  .stat .label{ font-size: 11.5px; color: var(--text-muted); margin: 0 0 4px; }
+  .stat .value{ font-size: 19px; font-weight: 600; margin:0; font-variant-numeric: tabular-nums; }
+  .stat .delta{ font-size: 11.5px; margin-top: 2px; }
+  .stat .delta.pos{ color: var(--green); }
+  .stat .delta.neg{ color: var(--red); }
+
+  .chart-wrap{ position: relative; width:100%; height: 230px; margin-top: 4px; }
+  .chart-title{ font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 0 0 6px; }
+
+  table.snap{ width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.snap th, table.snap td{
+    padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  table.snap th:first-child, table.snap td:first-child{ text-align:left; color: var(--text-secondary); }
+  table.snap th{ color: var(--text-muted); font-weight: 500; font-size: 11px; }
+  .table-scroll{ overflow-x: auto; margin: 0 -0.2rem; padding: 0 0.2rem; }
+
+  .footnote{ font-size: 11.5px; color: var(--text-muted); line-height: 1.6; margin-top: 0.4rem; }
+  .install-banner{
+    display:none; background: var(--blue-dim); border: 1px solid var(--blue);
+    border-radius: var(--radius); padding: 0.8rem 1rem; margin-bottom: 0.9rem;
+    font-size: 13px; color: var(--text-primary); align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .install-banner button{
+    background: var(--blue); color: white; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 13px; font-weight: 600; font-family: inherit;
+    white-space: nowrap;
+  }
+  .apply-btn{
+    display:block; width:100%; background: var(--blue); color:white; border:none;
+    border-radius: var(--radius); padding: 14px; font-size: 15px; font-weight: 600;
+    font-family: inherit; margin-bottom: 0.9rem;
+  }
+  .apply-btn:active{ opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>スワップ複利シミュレーター</h1>
+  <p>数値入力後はEnterまたは他の場所をタップで反映されます</p>
+</header>
+
+<main>
+
+  <div class="install-banner" id="install-banner">
+    <span>ホーム画面に追加してアプリのように使えます</span>
+    <button id="install-btn">追加</button>
+  </div>
+
+  <div class="card">
+    <h2>現在のポジション</h2>
+    <div class="field">
+      <label>現在のロット数 (1Lot=10,000通貨) <span class="val" id="out-lots">100.0</span></label>
+      <input type="number" id="in-lots" value="100" step="0.1" min="0">
+    </div>
+    <div class="field">
+      <label>現在のレート <span class="val" id="out-rate">4.700</span></label>
+      <input type="number" id="in-rate" value="4.70" step="0.01" min="0.01">
+    </div>
+    <div class="field">
+      <label>現在の純資産(証拠金評価額・円) <span class="val" id="out-equity">1,000,000</span></label>
+      <input type="number" id="in-equity" value="1000000" step="10000" min="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>積立・再投資設定</h2>
+    <div class="field">
+      <label>毎月の積立額(円) <span class="val" id="out-monthly">10,000</span></label>
+      <input type="number" id="in-monthly" value="10000" step="1000" min="0">
+    </div>
+    <div class="field">
+      <label>買い増し目標維持率 <span class="val" id="out-target">500%</span></label>
+      <input type="range" id="in-target" min="200" max="1000" value="500" step="50">
+    </div>
+    <div class="field">
+      <label>再投資トリガー額(円) <span class="val" id="out-trigger">5,000</span></label>
+      <input type="number" id="in-trigger" value="5000" step="1000" min="500">
+    </div>
+    <div class="field">
+      <label>1Lotあたりの日次スワップ(円) <span class="val" id="out-swap">25.3</span></label>
+      <input type="number" id="in-swap" value="25.3" step="0.1" min="0">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>レートシナリオ</h2>
+    <div class="field">
+      <div class="seg" id="scenario-seg">
+        <button data-v="decline" class="active">下落</button>
+        <button data-v="flat">維持</button>
+        <button data-v="rise">上昇</button>
+      </div>
+    </div>
+    <div class="field" id="change-field">
+      <label id="change-label">期間終了時点までの下落率 <span class="val" id="out-change">15%</span></label>
+      <input type="range" id="in-change" min="0" max="50" value="15" step="1">
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>シミュレーション期間</h2>
+    <div class="field">
+      <label>期間(ヶ月) <span class="val" id="out-months">36ヶ月</span></label>
+      <input type="range" id="in-months" min="1" max="60" value="36" step="1">
+    </div>
+  </div>
+
+  <button id="apply-btn" class="apply-btn">この内容で反映する</button>
+
+  <div class="stats-grid">
+    <div class="stat">
+      <p class="label">スタート時の維持率</p>
+      <p class="value" id="stat-start-ratio">-</p>
+    </div>
+    <div class="stat">
+      <p class="label">最終ロット数</p>
+      <p class="value" id="stat-lots">-</p>
+    </div>
+    <div class="stat">
+      <p class="label">最終純資産</p>
+      <p class="value" id="stat-equity">-</p>
+      <p class="delta" id="stat-profit"></p>
+    </div>
+    <div class="stat">
+      <p class="label">最終下落耐性</p>
+      <p class="value" id="stat-buffer">-</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>期間ごとのスナップショット</h2>
+    <div class="table-scroll">
+      <table class="snap" id="snap-table">
+        <thead>
+          <tr><th>月</th><th>ロット</th><th>日次SW</th><th>純資産</th><th>維持率</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">① ロット数(青) / 日次スワップ(コーラル)</p>
+    <div class="chart-wrap"><canvas id="chart-lots" role="img" aria-label="経過月数に対する総保有ロット数と日次スワップ額の推移"></canvas></div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">② 純資産の推移</p>
+    <div class="chart-wrap"><canvas id="chart-equity" role="img" aria-label="経過月数に対する純資産の推移"></canvas></div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">③ 現在レート(青) vs デッドラインレート(赤)</p>
+    <div class="chart-wrap"><canvas id="chart-deadline" role="img" aria-label="経過月数に対する現在レートとデッドラインレートの推移"></canvas></div>
+  </div>
+
+  <div class="card">
+    <p class="chart-title">④ 維持率の推移</p>
+    <div class="chart-wrap"><canvas id="chart-ratio" role="img" aria-label="経過月数に対する維持率の推移"></canvas></div>
+  </div>
+
+  <p class="footnote">
+    純資産は証券口座の「証拠金評価額」をそのまま入力してください。デッドラインレートは維持率100%(強制ロスカット水準の目安)に到達するレートです。実際のロスカット基準は各証券会社の規定をご確認ください。本アプリは投資助言ではありません。
+  </p>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
